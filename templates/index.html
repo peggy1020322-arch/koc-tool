@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>美顏相機 KOC 工具</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f7; color: #1d1d1f; min-height: 100vh; }
+
+    header { background: linear-gradient(135deg, #ff6b9d 0%, #c44dff 100%); padding: 22px 32px; color: white; }
+    header h1 { font-size: 20px; font-weight: 700; }
+    header p { font-size: 12px; opacity: 0.8; margin-top: 3px; }
+
+    .tabs { display: flex; background: white; border-bottom: 1px solid #e5e5ea; padding: 0 24px; }
+    .tab-btn { padding: 14px 20px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; background: none; color: #6e6e73; border-bottom: 3px solid transparent; margin-bottom: -1px; transition: color 0.2s; }
+    .tab-btn.active { color: #c44dff; border-bottom-color: #c44dff; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .container { max-width: 980px; margin: 0 auto; padding: 24px 20px; }
+    .card { background: white; border-radius: 14px; padding: 22px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); margin-bottom: 20px; }
+    .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .card-desc { font-size: 12px; color: #6e6e73; margin-bottom: 16px; line-height: 1.5; }
+
+    label { font-size: 11px; font-weight: 700; color: #6e6e73; text-transform: uppercase; letter-spacing: 0.5px; }
+    input, select { border: 1.5px solid #e5e5ea; border-radius: 9px; padding: 9px 12px; font-size: 13px; font-family: inherit; transition: border-color 0.2s; }
+    input:focus, select:focus { outline: none; border-color: #c44dff; }
+
+    .btn { background: linear-gradient(135deg, #ff6b9d, #c44dff); color: white; border: none; padding: 10px 22px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; }
+    .btn:hover { opacity: 0.88; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-sm { padding: 7px 14px; font-size: 12px; }
+    .btn-outline { background: none; border: 1.5px solid #c44dff; color: #c44dff; padding: 8px 16px; border-radius: 9px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn-outline:hover { background: #f8eeff; }
+
+    /* ── 帳號輸入區 ── */
+    .input-row { display: flex; gap: 10px; align-items: center; }
+    .input-row input { flex: 1; font-size: 14px; }
+
+    /* ── 標籤連結 ── */
+    .tag-section { margin-bottom: 4px; }
+    .tag-label { font-size: 11px; font-weight: 700; color: #6e6e73; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .tag-links { display: flex; flex-wrap: wrap; gap: 7px; }
+    .tag-link { display: inline-flex; align-items: center; gap: 4px; background: #f5f5f7; border: 1.5px solid #e5e5ea; border-radius: 20px; padding: 5px 13px; font-size: 12px; font-weight: 600; color: #3a3a3c; text-decoration: none; transition: border-color 0.15s, color 0.15s; }
+    .tag-link:hover { border-color: #c44dff; color: #c44dff; background: #faf0ff; }
+
+    /* ── 結果區 ── */
+    .result-header { font-size: 13px; font-weight: 600; color: #3a3a3c; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .count-badge { background: #f0e6ff; color: #7a00cc; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+
+    .account-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+
+    /* ── 帳號卡片 ── */
+    .account-card {
+      background: white; border-radius: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      border: 1.5px solid #f0f0f0; overflow: hidden;
+      transition: box-shadow 0.15s;
+    }
+    .account-card:hover { box-shadow: 0 5px 20px rgba(0,0,0,0.11); }
+    .account-card.eval-qualified { border-color: #52c97a; }
+    .account-card.eval-mutual   { border-color: #5ac8fa; }
+    .account-card.eval-special  { border-color: #ffd60a; }
+
+    /* 個人資料區 */
+    .ac-profile { display: flex; gap: 12px; align-items: flex-start; padding: 16px 16px 0; }
+    .ac-avatar-wrap { flex-shrink: 0; }
+    .ac-avatar { width: 54px; height: 54px; border-radius: 50%; object-fit: cover; display: block; }
+    .ac-avatar-ph { width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(135deg, #ffb3d1, #d4b0ff); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .ac-avatar.skeleton { background: #e5e5ea; animation: pulse 1.2s ease-in-out infinite; }
+
+    .ac-meta { flex: 1; min-width: 0; }
+    .ac-name { font-size: 14px; font-weight: 700; color: #1d1d1f; margin-bottom: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ac-name.skeleton { background: #e5e5ea; border-radius: 4px; height: 16px; width: 70%; animation: pulse 1.2s ease-in-out infinite; }
+    .ac-handle-label { font-size: 12px; color: #c44dff; font-weight: 600; margin-bottom: 5px; }
+    .ac-stats { display: flex; gap: 12px; }
+    .ac-stat { font-size: 11px; color: #6e6e73; }
+    .ac-stat strong { color: #1d1d1f; font-weight: 700; }
+    .ac-stat.skeleton { background: #e5e5ea; border-radius: 4px; height: 13px; width: 70px; animation: pulse 1.2s ease-in-out infinite; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+
+    .ac-bio { font-size: 11px; color: #555; line-height: 1.6; padding: 8px 16px 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .ac-bio.skeleton { background: #e5e5ea; border-radius: 4px; height: 26px; margin: 8px 16px 0; animation: pulse 1.2s ease-in-out infinite; }
+
+    .ac-footer { padding: 10px 16px 14px; display: flex; align-items: center; justify-content: space-between; }
+    .ac-threads-link { font-size: 11px; color: #6e6e73; text-decoration: none; font-weight: 500; }
+    .ac-threads-link:hover { color: #c44dff; }
+    .ac-remove { background: none; border: none; color: #ccc; font-size: 16px; cursor: pointer; padding: 2px 5px; border-radius: 5px; line-height: 1; }
+    .ac-remove:hover { color: #cc2200; background: #fff0f0; }
+
+    /* ── 評估區塊 ── */
+    .eval-zone { border-top: 1px solid #f0f0f0; }
+    .eval-toggle { width: 100%; background: none; border: none; padding: 10px 16px; font-size: 12px; font-weight: 600; color: #7a00cc; cursor: pointer; text-align: left; display: flex; align-items: center; justify-content: space-between; transition: background 0.15s; }
+    .eval-toggle:hover { background: #faf0ff; }
+    .eval-toggle .arrow { font-size: 10px; transition: transform 0.2s; }
+    .eval-toggle.open .arrow { transform: rotate(180deg); }
+
+    .eval-form { display: none; padding: 12px 16px 14px; background: #fafafa; border-top: 1px solid #f0f0f0; }
+    .eval-form.open { display: block; }
+    .eval-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .ef { display: flex; flex-direction: column; gap: 4px; }
+    .ef label { font-size: 10px; font-weight: 700; color: #6e6e73; text-transform: uppercase; letter-spacing: 0.4px; }
+    .ef input { border: 1.5px solid #e5e5ea; border-radius: 7px; padding: 6px 9px; font-size: 12px; font-family: inherit; }
+    .ef input:focus { outline: none; border-color: #c44dff; }
+    .eval-go { width: 100%; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 700; }
+
+    /* 評估結果（內嵌）*/
+    .eval-result { display: none; padding: 12px 16px 14px; background: #fafafa; border-top: 1px solid #f0f0f0; }
+    .eval-result.show { display: block; }
+    .er-type { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 6px; display: inline-block; margin-bottom: 10px; }
+    .er-qualified { background: #e3fce8; color: #1a7f3c; }
+    .er-mutual    { background: #e0f0ff; color: #0055aa; }
+    .er-special   { background: #fff3cd; color: #856404; }
+    .er-metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-bottom: 8px; }
+    .er-m { background: white; border-radius: 7px; padding: 6px 8px; border: 1px solid #e5e5ea; }
+    .er-m .rv { font-size: 13px; font-weight: 700; }
+    .er-m .rl { font-size: 10px; color: #6e6e73; margin-top: 1px; }
+    .er-checks { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+    .ck { font-size: 10px; font-weight: 600; padding: 3px 7px; border-radius: 5px; }
+    .ck-pass { background: #e3fce8; color: #1a7f3c; }
+    .ck-fail { background: #ffeaea; color: #cc0000; }
+    .ck-warn { background: #fff3cd; color: #856404; }
+    .er-price { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; border-top: 1px solid #e5e5ea; }
+    .er-price-label { font-size: 10px; color: #6e6e73; margin-bottom: 2px; }
+    .er-price-val { font-size: 16px; font-weight: 800; }
+    .er-price-discuss { color: #e06000; }
+    .er-redo { font-size: 11px; color: #c44dff; background: none; border: none; cursor: pointer; text-decoration: underline; }
+
+    /* ── Tab 2 批次 ── */
+    .eval-table-wrap { overflow-x: auto; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f5f5f7; padding: 9px 10px; text-align: left; font-size: 11px; font-weight: 700; color: #6e6e73; text-transform: uppercase; border-bottom: 1px solid #e5e5ea; white-space: nowrap; }
+    td { padding: 9px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    .tbl-input { border: 1.5px solid #e5e5ea; border-radius: 7px; padding: 6px 9px; font-size: 12px; width: 100%; font-family: inherit; }
+    .tbl-input:focus { outline: none; border-color: #c44dff; }
+    .del-btn { background: none; border: none; color: #ccc; font-size: 16px; cursor: pointer; padding: 2px 6px; border-radius: 5px; }
+    .del-btn:hover { color: #cc2200; background: #fff0f0; }
+    .add-row-btn { background: none; border: 1.5px dashed #c44dff; color: #c44dff; padding: 8px 0; width: 100%; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+    .add-row-btn:hover { background: #faf0ff; }
+
+    .stats-strip { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 20px; }
+    @media (max-width: 540px) { .stats-strip { grid-template-columns: repeat(2,1fr); } }
+    .stat-box { background: white; border-radius: 11px; padding: 14px; text-align: center; box-shadow: 0 1px 5px rgba(0,0,0,0.06); }
+    .stat-box .val { font-size: 22px; font-weight: 800; color: #c44dff; }
+    .stat-box .desc { font-size: 10px; color: #6e6e73; margin-top: 2px; }
+
+    .result-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px,1fr)); gap: 14px; margin-bottom: 28px; }
+    .res-card { background: white; border-radius: 14px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); border: 1.5px solid transparent; }
+    .res-card.qualified { border-color: #c8f0d0; }
+    .res-card.mutual    { border-color: #a0d4ff; }
+    .res-card.special   { border-color: #ffd60a; }
+    .res-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .res-name { font-size: 15px; font-weight: 700; }
+    .res-handle { font-size: 11px; color: #c44dff; margin-top: 2px; }
+    .type-badge { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 6px; white-space: nowrap; }
+    .tb-qualified { background: #e3fce8; color: #1a7f3c; }
+    .tb-mutual    { background: #e0f0ff; color: #0055aa; }
+    .tb-special   { background: #fff3cd; color: #856404; }
+    .b2-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-bottom: 12px; }
+    .b2-m { background: #f5f5f7; border-radius: 7px; padding: 7px 9px; }
+    .b2-m .mv { font-size: 13px; font-weight: 700; }
+    .b2-m .ml { font-size: 10px; color: #6e6e73; margin-top: 1px; }
+    .b2-checks { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
+    .b2-price { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid #f0f0f0; }
+    .b2-pv { font-size: 15px; font-weight: 800; }
+    .b2-pv-discuss { color: #e06000; }
+    .section-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .section-head h3 { font-size: 15px; font-weight: 700; }
+    .sb { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+    .sb-g { background: #e3fce8; color: #1a7f3c; }
+    .sb-b { background: #e0f0ff; color: #0055aa; }
+
+    .loading { text-align: center; padding: 30px 0; display: none; }
+    .spinner { width: 30px; height: 30px; border: 3px solid #e5e5ea; border-top-color: #c44dff; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading p { color: #6e6e73; font-size: 13px; }
+
+    /* ── IG 登入狀態列 ── */
+    .ig-bar { display: flex; align-items: center; gap: 10px; background: white; border-bottom: 1px solid #e5e5ea; padding: 10px 24px; font-size: 13px; }
+    .ig-dot { width: 9px; height: 9px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+    .ig-dot.on { background: #34c759; }
+    .ig-info { flex: 1; color: #6e6e73; }
+    .ig-info strong { color: #1d1d1f; }
+    .ig-login-btn { background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: white; border: none; padding: 7px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .ig-login-btn:hover { opacity: 0.88; }
+
+    /* ── Modal ── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: white; border-radius: 18px; padding: 28px 28px 24px; width: 340px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+    .modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    .modal .modal-sub { font-size: 12px; color: #6e6e73; margin-bottom: 20px; }
+    .modal-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+    .modal-field label { font-size: 11px; font-weight: 700; color: #6e6e73; text-transform: uppercase; letter-spacing: 0.5px; }
+    .modal-field input { border: 1.5px solid #e5e5ea; border-radius: 9px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
+    .modal-field input:focus { outline: none; border-color: #c44dff; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+    .modal-actions .btn { flex: 1; padding: 11px; font-size: 14px; }
+    .modal-cancel { flex: 0 0 auto; background: none; border: 1.5px solid #e5e5ea; color: #6e6e73; padding: 11px 18px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .modal-cancel:hover { border-color: #c44dff; color: #c44dff; }
+    .modal-err { background: #fff0f0; border-radius: 8px; padding: 9px 12px; color: #cc2200; font-size: 12px; margin-bottom: 12px; display: none; }
+    .err { background: #fff0f0; border-radius: 10px; padding: 12px 16px; color: #cc2200; font-size: 13px; margin-bottom: 14px; display: none; }
+    .platform-btn { border: 1.5px solid #e5e5ea; background: white; color: #6e6e73; border-radius: 20px; padding: 6px 16px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+    .platform-btn.active { border-color: #c44dff; background: #f8eeff; color: #7a00cc; }
+    .platform-btn:hover:not(.active) { border-color: #c44dff; color: #c44dff; }
+
+    /* ── 智慧海撈卡片 ── */
+    .smart-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap: 16px; }
+    .smart-card { background: white; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border: 1.5px solid #f0f0f0; overflow: hidden; transition: box-shadow 0.15s, border-color 0.15s; position: relative; cursor: pointer; }
+    .smart-card:hover { box-shadow: 0 5px 20px rgba(0,0,0,0.12); }
+    .smart-card.tier-micro { border-color: #d1fae5; }
+    .smart-card.tier-small { border-color: #dbeafe; }
+    .smart-card.tier-mid   { border-color: #ede9fe; }
+    .smart-card.tier-macro { border-color: #fef3c7; }
+    .smart-card.tier-mutual { border-color: #fce7f3; }
+    .smart-card.selected   { border-color: #c44dff !important; box-shadow: 0 0 0 2.5px #c44dff44; }
+    .mutual-badge { display:inline-block; background:#fff0f6; color:#c44dff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; margin-bottom:6px; }
+    .sc-check { position:absolute; top:10px; right:10px; width:20px; height:20px; accent-color:#c44dff; cursor:pointer; z-index:2; }
+    /* 匯出浮動列 */
+    .export-bar { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:white; border-radius:14px; box-shadow:0 6px 28px rgba(0,0,0,0.18); padding:12px 22px; display:none; align-items:center; gap:16px; z-index:300; border:1.5px solid #e5e5ea; white-space:nowrap; }
+    .export-bar.show { display:flex; }
+    .export-bar-info { font-size:13px; color:#3a3a3c; }
+    .export-bar-info strong { color:#c44dff; }
+    .export-topic-input { border:1.5px solid #e5e5ea; border-radius:8px; padding:6px 10px; font-size:12px; width:130px; }
+    .export-topic-input:focus { outline:none; border-color:#c44dff; }
+    .sc-top { display: flex; gap: 12px; align-items: flex-start; padding: 16px 16px 0; }
+    .sc-avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .sc-avatar-ph { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg,#ffb3d1,#d4b0ff); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+    .sc-meta { flex: 1; min-width: 0; }
+    .sc-name { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sc-handle { font-size: 12px; color: #c44dff; font-weight: 600; margin: 2px 0 4px; }
+    .sc-stats { font-size: 11px; color: #6e6e73; }
+    .sc-stats strong { color: #1d1d1f; }
+    .sc-bio { font-size: 11px; color: #555; line-height: 1.6; padding: 8px 16px 0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .sc-snippet { font-size: 11px; color: #888; line-height: 1.5; padding: 6px 16px 0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-style:italic; }
+    .sc-footer { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 14px; margin-top: 8px; border-top: 1px solid #f0f0f0; }
+    .sc-price { display: flex; flex-direction: column; }
+    .sc-price-label { font-size: 10px; color: #6e6e73; margin-bottom: 2px; }
+    .sc-price-val { font-size: 15px; font-weight: 800; color: #1d1d1f; }
+    .sc-price-val.discuss { color: #e06000; }
+    .sc-link { font-size: 11px; color: #6e6e73; text-decoration: none; font-weight: 500; }
+    .sc-link:hover { color: #c44dff; }
+    #evalResults { display: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>美顏相機 KOC 工具</h1>
+  <p>台灣 Threads 市場 · 快速評估 ＋ 智慧海撈</p>
+</header>
+
+<!-- 登入狀態列 -->
+<div class="ig-bar">
+  <div class="ig-dot" id="igDot"></div>
+  <div class="ig-info" id="igInfo">Instagram 未連線</div>
+  <button class="ig-login-btn" id="igLoginBtn" onclick="openIgModal()">登入 Instagram</button>
+  <div style="width:1px;height:18px;background:#e5e5ea;margin:0 4px"></div>
+  <div class="ig-dot" id="threadsDot"></div>
+  <div class="ig-info" id="threadsInfo" style="margin-right:8px">Threads 未連線</div>
+  <button class="ig-login-btn" id="threadsLoginBtn" onclick="openThreadsModal()">連線 Threads</button>
+</div>
+
+<!-- Threads Cookie 連線 Modal -->
+<div class="modal-overlay" id="threadsModal">
+  <div class="modal" style="max-width:500px">
+    <h3>連線 Threads</h3>
+    <p class="modal-sub" style="line-height:1.7">
+      請用 <strong>Cookie-Editor</strong> 擴充功能匯出 Threads cookies，貼到下方即可完成連線。<br>
+      <span style="color:#6e6e73;font-size:11px">只需設定一次，cookies 存在本機，不會上傳。</span>
+    </p>
+    <div style="background:#f0faf4;border:1px solid #b7e4c7;border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:12px;line-height:2">
+      <strong style="font-size:13px">操作步驟</strong><br>
+      ① 安裝 Chrome 擴充功能：<a href="https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm" target="_blank" style="color:#c44dff">Cookie-Editor</a>（免費）<br>
+      ② 在 Chrome 開啟 <a href="https://www.threads.com" target="_blank" style="color:#c44dff">threads.com</a>，確認已登入<br>
+      ③ 點擊右上角 Cookie-Editor 圖示<br>
+      ④ 點右下角 <strong>Export → JSON</strong> → 複製全部<br>
+      ⑤ 貼到下方
+    </div>
+    <div class="modal-err" id="threadsModalErr"></div>
+    <div class="modal-field">
+      <label>貼上 Cookies JSON</label>
+      <textarea id="threadsCookiesJson" rows="5" placeholder='[{"name":"ds_user_id","value":"..."},...]'
+        style="width:100%;border:1.5px solid #e5e5ea;border-radius:9px;padding:9px 12px;font-size:12px;font-family:monospace;resize:vertical"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeThreadsModal()">取消</button>
+      <button class="btn" id="threadsModalBtn" onclick="submitThreadsCookies()">儲存並連線</button>
+    </div>
+  </div>
+</div>
+
+<!-- IG 登入 Modal -->
+<div class="modal-overlay" id="igModal">
+  <div class="modal">
+    <!-- 第一步：帳號密碼 -->
+    <div id="igStep1">
+      <h3>登入 Instagram</h3>
+      <p class="modal-sub">使用您的 IG 帳號登入，才能查詢 IG 帳號資料。<br>帳號密碼僅用於本機連線，不會上傳。</p>
+      <div class="modal-err" id="igModalErr"></div>
+      <div class="modal-field">
+        <label>Instagram 帳號</label>
+        <input type="text" id="igUser" placeholder="your_username" autocomplete="username" />
+      </div>
+      <div class="modal-field">
+        <label>密碼</label>
+        <input type="password" id="igPass" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <div class="modal-actions">
+        <button class="modal-cancel" onclick="closeIgModal()">取消</button>
+        <button class="btn" id="igSubmitBtn" onclick="doIgLogin()">登入</button>
+      </div>
+    </div>
+    <!-- 第二步：驗證碼 -->
+    <div id="igStep2" style="display:none">
+      <h3>輸入驗證碼</h3>
+      <p class="modal-sub">Instagram 已傳送驗證碼到您的手機或 Email，請輸入 6 位數驗證碼。</p>
+      <div class="modal-err" id="igVerifyErr"></div>
+      <div class="modal-field">
+        <label>驗證碼</label>
+        <input type="text" id="igCode" placeholder="000000" maxlength="6" inputmode="numeric" style="letter-spacing:6px;font-size:20px;text-align:center" />
+      </div>
+      <div class="modal-actions">
+        <button class="modal-cancel" onclick="backToStep1()">返回</button>
+        <button class="btn" id="igVerifyBtn" onclick="doIgVerify()">驗證</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('quick',this)">⚡ 快速評估</button>
+  <button class="tab-btn" onclick="switchTab('smart',this)">🎯 智慧海撈</button>
+</div>
+
+<!-- ══ TAB 快速評估 ══ -->
+<div id="tab-quick" class="tab-panel active">
+  <div class="container">
+    <div class="card">
+      <h2>⚡ 快速 KOC 分析</h2>
+      <p class="card-desc">輸入帳號名稱，自動抓取粉絲數、近期 5 篇流量，即時給出報價建議。</p>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="platform-btn active" id="qpThreads" onclick="setQPlatform('threads',this)">Threads</button>
+        <button class="platform-btn" id="qpIg" onclick="setQPlatform('instagram',this)">📸 Instagram</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="quickHandle" placeholder="輸入帳號，例：beauty_tw 或 @beauty_tw"
+          style="flex:1;font-size:15px;padding:11px 14px;border:1.5px solid #e5e5ea;border-radius:9px;font-family:inherit" />
+        <button class="btn" id="quickBtn" onclick="doQuickEval()">分析</button>
+      </div>
+    </div>
+
+    <div class="err" id="quickErr"></div>
+    <div class="loading" id="quickLoading" style="display:none">
+      <div class="spinner"></div>
+      <p id="quickLoadingMsg">抓取帳號資料中⋯</p>
+    </div>
+
+    <div id="quickResultArea" style="display:none">
+
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <div id="qAvWrap" style="flex-shrink:0">
+            <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#ffb3d1,#d4b0ff);display:flex;align-items:center;justify-content:center;font-size:28px">🌸</div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div id="qName" style="font-size:17px;font-weight:700;margin-bottom:2px"></div>
+            <div id="qHandleLabel" style="font-size:13px;color:#c44dff;font-weight:600;margin-bottom:5px"></div>
+            <div id="qStatsLine" style="font-size:12px;color:#6e6e73"></div>
+            <div id="qBioText" style="font-size:12px;color:#555;margin-top:6px;line-height:1.6;display:none"></div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;padding-left:12px">
+            <div id="qPriceLabel" style="font-size:10px;color:#6e6e73;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">建議報價</div>
+            <div id="qPriceVal" style="font-size:14px;font-weight:800"></div>
+            <a id="qProfileLink" href="#" target="_blank"
+               style="font-size:11px;color:#6e6e73;text-decoration:none;display:block;margin-top:6px">查看帳號 ↗</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <h2>近期 5 篇流量</h2>
+          <div id="qAvgChip" style="display:none;background:#f0e6ff;color:#7a00cc;font-size:12px;font-weight:700;padding:4px 14px;border-radius:20px"></div>
+        </div>
+        <div id="qPostsContent"></div>
+        <div id="qManualInput" style="display:none;margin-top:14px;padding:14px;background:#fff8f0;border-radius:10px;border:1.5px solid #ffe0b2">
+          <p style="font-size:12px;color:#e06000;margin-bottom:10px">⚠ 未連線 Threads 或帳號不存在，請手動填入近5篇均流量（用於報價計算）：</p>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="number" id="qManualViews" placeholder="例：28000"
+              style="flex:1;border:1.5px solid #e5e5ea;border-radius:8px;padding:8px 11px;font-size:13px;font-family:inherit" />
+            <button class="btn btn-sm" onclick="doManualEval()">重新評估</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB 智慧海撈 ══ -->
+<div id="tab-smart" class="tab-panel">
+  <div class="container">
+    <div class="card">
+      <h2>智慧海撈 KOC</h2>
+      <p class="card-desc">告訴我這次的推廣方向和想找的 KOC 特質，系統自動在 Threads 海撈符合的帳號，並直接給出定價建議。</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+        <div>
+          <label style="display:block;margin-bottom:6px">推廣主題 / 功能</label>
+          <input type="text" id="smartTopic" placeholder="例：AI磨皮、換髮色、妝效濾鏡" style="width:100%" />
+        </div>
+        <div>
+          <label style="display:block;margin-bottom:6px">KOC 風格描述</label>
+          <input type="text" id="smartStyle" placeholder="例：甜美風、18-25歲、日系穿搭、台灣女生" style="width:100%" />
+        </div>
+      </div>
+      <button class="btn" id="smartBtn" onclick="doSmartSearch()">🔍 開始海撈</button>
+    </div>
+
+    <div class="err" id="smartErr"></div>
+    <div class="loading" id="smartLoading"><div class="spinner"></div><p>正在搜尋並分析帳號⋯⋯</p></div>
+
+    <div id="smartResults" style="display:none">
+      <!-- 付費合作 KOC -->
+      <div class="result-header">
+        合作 KOC <span class="count-badge" id="smartCount">0</span>
+        <span id="smartQueryNote" style="font-size:11px;color:#6e6e73;margin-left:8px"></span>
+      </div>
+      <div class="smart-grid" id="smartGrid"></div>
+
+      <!-- 互惠候選 -->
+      <div id="mutualSection" style="display:none;margin-top:28px">
+        <div class="result-header" style="margin-bottom:6px">
+          互惠候選
+          <span class="count-badge" id="mutualCount" style="background:#fff0f6;color:#c44dff">0</span>
+          <span style="font-size:11px;color:#6e6e73;margin-left:8px">流量較小但有潛力，建議以商品換貼文合作</span>
+        </div>
+        <div class="smart-grid" id="mutualGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 工具 ──
+const fmt = n => { n = Number(n); return n >= 10000 ? (n/10000).toFixed(1)+'萬' : n.toLocaleString(); };
+const fmtF = n => n != null ? fmt(n) : '—';
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── IG 登入 ──
+let currentPlatform = 'threads';
+
+function setPlatform(p, btn) {
+  currentPlatform = p;
+  document.querySelectorAll('.platform-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const inp = document.getElementById('handleInput');
+  inp.placeholder = p === 'instagram'
+    ? '貼上 IG 帳號，例：@beauty_tw 或多個用空格分隔'
+    : '貼上 Threads 帳號，例：@millet_makeup_';
+  if (p === 'instagram' && !igLoggedIn) {
+    openIgModal();
+  }
+}
+
+let igLoggedIn = false;
+
+async function checkIgStatus() {
+  try {
+    const res = await fetch('/ig-status');
+    const d = await res.json();
+    igLoggedIn = d.logged_in;
+    document.getElementById('igDot').className = 'ig-dot' + (d.logged_in ? ' on' : '');
+    document.getElementById('igInfo').innerHTML = d.logged_in
+      ? `Instagram 已連線 &nbsp;<strong>@${d.username}</strong>`
+      : 'Instagram 未連線';
+    document.getElementById('igLoginBtn').textContent = d.logged_in ? '切換帳號' : '登入 Instagram';
+  } catch(e) {}
+}
+
+async function checkThreadsStatus() {
+  try {
+    const res = await fetch('/threads-status');
+    const d = await res.json();
+    document.getElementById('threadsDot').className = 'ig-dot' + (d.logged_in ? ' on' : '');
+    document.getElementById('threadsInfo').textContent = d.logged_in ? 'Threads 已連線' : 'Threads 未連線';
+    document.getElementById('threadsLoginBtn').textContent = d.logged_in ? '重新設定' : '連線 Threads';
+  } catch(e) {}
+}
+
+function openThreadsModal() {
+  document.getElementById('threadsCookiesJson').value = '';
+  document.getElementById('threadsModalErr').style.display = 'none';
+  document.getElementById('threadsModal').classList.add('show');
+  setTimeout(() => document.getElementById('threadsCookiesJson').focus(), 100);
+}
+
+function closeThreadsModal() {
+  document.getElementById('threadsModal').classList.remove('show');
+  document.getElementById('threadsCookiesJson').value = '';
+}
+
+async function submitThreadsCookies() {
+  const raw = document.getElementById('threadsCookiesJson').value.trim();
+  if (!raw) {
+    const el = document.getElementById('threadsModalErr');
+    el.textContent = '請貼入 Cookie-Editor 匯出的 JSON'; el.style.display = 'block'; return;
+  }
+  const btn = document.getElementById('threadsModalBtn');
+  btn.disabled = true; btn.textContent = '儲存中⋯';
+  document.getElementById('threadsModalErr').style.display = 'none';
+  try {
+    const res = await fetch('/threads-login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({cookies_json: raw})
+    });
+    const d = await res.json();
+    if (d.ok) {
+      closeThreadsModal();
+      await checkThreadsStatus();
+    } else {
+      const el = document.getElementById('threadsModalErr');
+      el.textContent = d.error || '儲存失敗'; el.style.display = 'block';
+    }
+  } catch(e) {
+    const el = document.getElementById('threadsModalErr');
+    el.textContent = '發生錯誤：' + e.message; el.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = '儲存並連線';
+  }
+}
+
+function openIgModal() {
+  document.getElementById('igModal').classList.add('show');
+  document.getElementById('igModalErr').style.display = 'none';
+  document.getElementById('igUser').focus();
+}
+function closeIgModal() {
+  document.getElementById('igModal').classList.remove('show');
+  document.getElementById('igPass').value = '';
+  document.getElementById('igStep1').style.display = 'block';
+  document.getElementById('igStep2').style.display = 'none';
+}
+
+async function doIgLogin() {
+  const username = document.getElementById('igUser').value.trim();
+  const password = document.getElementById('igPass').value;
+  if (!username || !password) { showModalErr('請填入帳號和密碼'); return; }
+  const btn = document.getElementById('igSubmitBtn');
+  btn.disabled = true; btn.textContent = '登入中⋯';
+  document.getElementById('igModalErr').style.display = 'none';
+  try {
+    const res = await fetch('/ig-login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({username, password})
+    });
+    const d = await res.json();
+    if (d.ok) {
+      igLoggedIn = true;
+      await checkIgStatus();
+      closeIgModal();
+    } else if (d.need_2fa) {
+      // 切換到驗證碼步驟
+      document.getElementById('igStep1').style.display = 'none';
+      document.getElementById('igStep2').style.display = 'block';
+      document.getElementById('igCode').value = '';
+      document.getElementById('igVerifyErr').style.display = 'none';
+      setTimeout(() => document.getElementById('igCode').focus(), 100);
+    } else {
+      showModalErr(d.error || '登入失敗');
+    }
+  } catch(e) {
+    showModalErr('連線失敗：' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '登入';
+  }
+}
+
+async function doIgVerify() {
+  const code = document.getElementById('igCode').value.trim();
+  if (!code) { showVerifyErr('請輸入驗證碼'); return; }
+  const btn = document.getElementById('igVerifyBtn');
+  btn.disabled = true; btn.textContent = '驗證中⋯';
+  document.getElementById('igVerifyErr').style.display = 'none';
+  try {
+    const res = await fetch('/ig-verify', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({code})
+    });
+    const d = await res.json();
+    if (d.ok) {
+      igLoggedIn = true;
+      await checkIgStatus();
+      closeIgModal();
+    } else {
+      showVerifyErr(d.error || '驗證失敗');
+    }
+  } catch(e) {
+    showVerifyErr('連線失敗：' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '驗證';
+  }
+}
+
+function backToStep1() {
+  document.getElementById('igStep2').style.display = 'none';
+  document.getElementById('igStep1').style.display = 'block';
+}
+
+function showModalErr(msg) {
+  const el = document.getElementById('igModalErr');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+function showVerifyErr(msg) {
+  const el = document.getElementById('igVerifyErr');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+// Enter 鍵觸發登入
+document.addEventListener('DOMContentLoaded', () => {
+  checkIgStatus();
+  checkThreadsStatus();
+  document.getElementById('igPass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doIgLogin();
+  });
+  document.getElementById('igUser').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('igPass').focus();
+  });
+  // 點 overlay 背景關閉
+  document.getElementById('igModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeIgModal();
+  });
+  document.getElementById('igCode').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doIgVerify();
+  });
+  document.getElementById('threadsModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeThreadsModal();
+  });
+  document.getElementById('handleInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addHandles();
+  });
+});
+
+// ── Tab 1：帳號加入 ──
+const cards = {};  // handle → card state
+
+function addHandles() {
+  const raw = document.getElementById('handleInput').value.trim();
+  if (!raw) return;
+  if (currentPlatform === 'instagram' && !igLoggedIn) {
+    openIgModal();
+    return;
+  }
+  const handles = raw.split(/[\s,，]+/)
+    .map(h => h.startsWith('@') ? h : '@'+h)
+    .filter(h => h.length > 1);
+  if (!handles.length) return;
+  document.getElementById('handleInput').value = '';
+  handles.forEach(h => addCard(h, currentPlatform));
+}
+
+function addCard(handle, platform) {
+  platform = platform || 'threads';
+  const key = platform + '_' + handle.toLowerCase();
+  if (cards[key]) return;
+  cards[key] = { handle, platform };
+
+  const grid = document.getElementById('accountGrid');
+  const id = 'c_' + key.replace(/[@._]/g,'_');
+  const div = document.createElement('div');
+  div.className = 'account-card';
+  div.id = id;
+  div.innerHTML = cardHTML(handle, id, platform);
+  grid.appendChild(div);
+
+  updateCount();
+  document.getElementById('cardArea').style.display = 'block';
+  fetchProfile(handle, id, platform);
+}
+
+function cardHTML(handle, id, platform) {
+  const isIg = platform === 'instagram';
+  const profileUrl = isIg
+    ? `https://www.instagram.com/${handle.replace('@','')}/`
+    : `https://www.threads.com/${handle}`;
+  const linkLabel = isIg ? '在 Instagram 查看 ↗' : '在 Threads 查看 ↗';
+  const platformBadge = isIg
+    ? `<span style="font-size:10px;background:#fce4ec;color:#c2185b;font-weight:700;padding:2px 7px;border-radius:5px;margin-left:6px">📸 IG</span>`
+    : `<span style="font-size:10px;background:#f0e6ff;color:#7a00cc;font-weight:700;padding:2px 7px;border-radius:5px;margin-left:6px">Threads</span>`;
+  return `
+    <div class="ac-profile">
+      <div class="ac-avatar-wrap" id="${id}_av">
+        <div class="ac-avatar-ph">🌸</div>
+      </div>
+      <div class="ac-meta">
+        <div class="ac-name skeleton" id="${id}_name">&nbsp;</div>
+        <div style="display:flex;align-items:center"><span class="ac-handle-label">${handle}</span>${platformBadge}</div>
+        <div class="ac-stats skeleton" id="${id}_stats">&nbsp;</div>
+      </div>
+    </div>
+    <div class="ac-bio skeleton" id="${id}_bio">&nbsp;</div>
+    <div class="ac-footer">
+      <a class="ac-threads-link" href="${profileUrl}" target="_blank">${linkLabel}</a>
+      <button class="ac-remove" onclick="removeCard('${handle}','${id}','${platform}')">✕</button>
+    </div>
+    <div class="eval-zone">
+      <button class="eval-toggle" id="${id}_toggle" onclick="toggleForm('${id}')">
+        <span>📊 立即評估</span><span class="arrow">▼</span>
+      </button>
+      <div class="eval-form" id="${id}_form">
+        <div class="eval-fields">
+          <div class="ef"><label>粉絲數</label><input type="number" id="${id}_fol" placeholder="自動帶入" /></div>
+          <div class="ef"><label>近5篇均流量</label><input type="number" id="${id}_views" placeholder="例：28000" /></div>
+          <div class="ef"><label>受眾年齡</label><input type="text" id="${id}_age" placeholder="例：18-25歲" /></div>
+          <div class="ef"><label>備註</label><input type="text" id="${id}_notes" placeholder="風格、氣質" /></div>
+        </div>
+        <button class="btn btn-sm eval-go" onclick="evalCard('${id}','${handle}')">立即評估</button>
+      </div>
+      <div class="eval-result" id="${id}_result"></div>
+    </div>`;
+}
+
+async function fetchProfile(handle, id, platform) {
+  try {
+    let p;
+    if (platform === 'instagram') {
+      const res = await fetch('/ig-fetch-profile', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({username: handle.replace('@','')})
+      });
+      const d = await res.json();
+      if (!d.ok) throw new Error(d.error || 'IG 抓取失敗');
+      p = d;
+    } else {
+      const res = await fetch('/fetch-profiles', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({handles:[handle]})
+      });
+      const data = await res.json();
+      p = data[handle];
+      if (!p) return;
+    }
+
+    const avEl = document.getElementById(id+'_av');
+    if (avEl && p.avatar) {
+      avEl.innerHTML = `<img class="ac-avatar" src="${p.avatar}" onerror="this.parentNode.innerHTML='<div class=\\'ac-avatar-ph\\'>🌸</div>'" />`;
+    }
+    const nameEl = document.getElementById(id+'_name');
+    if (nameEl) { nameEl.textContent = p.display_name || handle; nameEl.classList.remove('skeleton'); }
+    const statsEl = document.getElementById(id+'_stats');
+    if (statsEl) {
+      const postLabel = platform === 'instagram' ? '貼文' : '篇';
+      statsEl.innerHTML = `<strong>${fmtF(p.followers)}</strong> 粉絲 &nbsp;·&nbsp; <strong>${p.posts != null ? p.posts : '—'}</strong> ${postLabel}`;
+      statsEl.classList.remove('skeleton');
+    }
+    const bioEl = document.getElementById(id+'_bio');
+    if (bioEl) {
+      if (p.bio) { bioEl.textContent = p.bio; bioEl.classList.remove('skeleton'); }
+      else { bioEl.style.display = 'none'; }
+    }
+    if (p.followers) {
+      const folInput = document.getElementById(id+'_fol');
+      if (folInput && !folInput.value) folInput.value = p.followers;
+    }
+  } catch(e) {
+    ['_name','_stats'].forEach(s => {
+      const el = document.getElementById(id+s);
+      if (el) { el.classList.remove('skeleton'); el.textContent = s === '_name' ? handle : (e.message || '抓取失敗'); }
+    });
+    const bioEl = document.getElementById(id+'_bio');
+    if (bioEl) bioEl.style.display = 'none';
+  }
+}
+
+function removeCard(handle, id, platform) {
+  platform = platform || 'threads';
+  delete cards[platform + '_' + handle.toLowerCase()];
+  const el = document.getElementById(id);
+  if (el) el.remove();
+  updateCount();
+  if (Object.keys(cards).length === 0)
+    document.getElementById('cardArea').style.display = 'none';
+}
+
+function clearCards() {
+  Object.keys(cards).forEach(k => delete cards[k]);
+  document.getElementById('accountGrid').innerHTML = '';
+  document.getElementById('cardArea').style.display = 'none';
+}
+
+function updateCount() {
+  document.getElementById('cardCount').textContent = Object.keys(cards).length;
+}
+
+function toggleForm(id) {
+  const form = document.getElementById(id+'_form');
+  const toggle = document.getElementById(id+'_toggle');
+  const isOpen = form.classList.contains('open');
+  form.classList.toggle('open', !isOpen);
+  toggle.classList.toggle('open', !isOpen);
+  if (!isOpen) document.getElementById(id+'_views').focus();
+}
+
+async function evalCard(id, handle) {
+  const followers = parseInt(document.getElementById(id+'_fol').value) || 0;
+  const avg_views = parseInt(document.getElementById(id+'_views').value) || 0;
+  const audience_age = document.getElementById(id+'_age').value.trim();
+  const notes = document.getElementById(id+'_notes').value.trim();
+  if (!followers && !avg_views) { alert('請至少填入粉絲數或流量'); return; }
+
+  const btn = document.querySelector(`#${id}_form .eval-go`);
+  btn.disabled = true; btn.textContent = '評估中…';
+  try {
+    const res = await fetch('/evaluate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({candidates:[{name:'',handle,followers,avg_views,audience_age,notes}]})
+    });
+    const data = await res.json();
+    showCardResult(id, data.results[0]);
+  } catch(e) { alert('評估失敗：'+e.message); }
+  finally { btn.disabled=false; btn.textContent='立即評估'; }
+}
+
+function showCardResult(id, r) {
+  const card = document.getElementById(id);
+  card.className = 'account-card eval-'+(r.is_special?'special':r.type);
+
+  // 摺疊表單
+  document.getElementById(id+'_form').classList.remove('open');
+  document.getElementById(id+'_toggle').classList.remove('open');
+  document.querySelector('#'+id+'_toggle span:first-child').textContent = '📊 修改數據';
+
+  const typeLabel = r.is_special ? '特例 · 待討論 ⭐' : r.type==='qualified' ? '✅ 正式合作' : '🌱 互惠合作';
+  const typeCls   = r.is_special ? 'er-special' : r.type==='qualified' ? 'er-qualified' : 'er-mutual';
+  const r1 = r.rule1 ? '<span class="ck ck-pass">✓ 粉絲達標</span>' : '<span class="ck ck-fail">✗ 粉絲未達標</span>';
+  const r2 = r.rule2_over ? '<span class="ck ck-warn">⚠ 流量超高·特例</span>'
+           : r.rule2 ? '<span class="ck ck-pass">✓ 流量達標</span>'
+           : '<span class="ck ck-fail">✗ 流量未達標</span>';
+  const age = r.audience_age ? `<span class="ck ck-pass">✓ ${r.audience_age}</span>` : '';
+  const priceHtml = r.price_range.includes('待討論')
+    ? `<span class="er-price-val er-price-discuss">${r.price_range}</span>`
+    : `<span class="er-price-val">${r.price_range}</span>`;
+
+  const el = document.getElementById(id+'_result');
+  el.innerHTML = `
+    <span class="er-type ${typeCls}">${typeLabel}</span>
+    <div class="er-metrics">
+      <div class="er-m"><div class="rv">${fmt(r.followers)}</div><div class="rl">粉絲數</div></div>
+      <div class="er-m"><div class="rv">${fmt(r.avg_views)}</div><div class="rl">均流量</div></div>
+      <div class="er-m"><div class="rv">${r.roi}</div><div class="rl">ROI</div></div>
+    </div>
+    <div class="er-checks">${r1}${r2}${age}</div>
+    <div class="er-price">
+      <div><div class="er-price-label">建議報價</div>${priceHtml}</div>
+      <button class="er-redo" onclick="toggleForm('${id}')">修改數據</button>
+    </div>`;
+  el.classList.add('show');
+}
+
+// ── 智慧海撈 ──
+async function doSmartSearch() {
+  const topic = document.getElementById('smartTopic').value.trim();
+  const style = document.getElementById('smartStyle').value.trim();
+  if (!topic && !style) {
+    const el = document.getElementById('smartErr');
+    el.textContent = '請至少填入推廣主題或 KOC 風格'; el.style.display = 'block'; return;
+  }
+  document.getElementById('smartErr').style.display = 'none';
+  document.getElementById('smartResults').style.display = 'none';
+  document.getElementById('smartLoading').style.display = 'block';
+  document.getElementById('smartBtn').disabled = true;
+  // 清除上次勾選
+  _selectedKOCs = {};
+  updateExportBar();
+
+  try {
+    const res = await fetch('/smart-search', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({topic, style})
+    });
+    const d = await res.json();
+    if (!d.ok) throw new Error(d.error);
+    renderSmartResults(d);
+  } catch(e) {
+    const el = document.getElementById('smartErr');
+    el.textContent = '搜尋失敗：' + e.message; el.style.display = 'block';
+  } finally {
+    document.getElementById('smartLoading').style.display = 'none';
+    document.getElementById('smartBtn').disabled = false;
+  }
+}
+
+function buildSmartCard(r, isMutual=false) {
+  const avatarHtml = r.avatar
+    ? `<img class="sc-avatar" src="${r.avatar}" onerror="this.outerHTML='<div class=\\'sc-avatar-ph\\'>🌸</div>'" />`
+    : `<div class="sc-avatar-ph">🌸</div>`;
+  const fol = r.followers != null ? fmt(r.followers) : '—';
+  const posts = r.posts != null ? r.posts : '—';
+  const mutualBadge = isMutual ? `<div class="mutual-badge">互惠候選</div>` : '';
+  const priceHtml = isMutual
+    ? `<div class="sc-price-label">合作方式</div><div class="sc-price-val" style="color:#c44dff">商品換貼文</div>`
+    : `<div class="sc-price-label">建議報價</div><div class="sc-price-val ${r.price_range.includes('待') ? 'discuss' : ''}">${r.price_range}</div>`;
+  const snippetHtml = r.snippet ? `<div class="sc-snippet">${r.snippet.replace(/</g,'&lt;')}</div>` : '';
+  const tierClass = isMutual ? 'tier-mutual' : `tier-${r.price_tier}`;
+  const cbId = 'cb_' + r.handle.replace(/[^a-zA-Z0-9]/g,'_');
+  const cardData = JSON.stringify({...r, is_mutual: isMutual}).replace(/"/g, '&quot;');
+  return `
+    <div class="smart-card ${tierClass}" data-handle="${r.handle}" data-koc="${cardData}"
+         onclick="toggleCardSelect('${r.handle}', event)">
+      <input type="checkbox" class="sc-check" id="${cbId}"
+             onclick="toggleCardSelect('${r.handle}', event)" />
+      <div class="sc-top">
+        ${avatarHtml}
+        <div class="sc-meta">
+          ${mutualBadge}
+          <div class="sc-name">${r.display_name || r.handle}</div>
+          <div class="sc-handle">${r.handle}</div>
+          <div class="sc-stats"><strong>${fol}</strong> 粉絲 &nbsp;·&nbsp; <strong>${posts}</strong> 篇</div>
+        </div>
+      </div>
+      ${r.bio ? `<div class="sc-bio">${r.bio}</div>` : ''}
+      ${snippetHtml}
+      <div class="sc-footer">
+        <div class="sc-price">${priceHtml}</div>
+        <a class="sc-link" href="${r.profile_url}" target="_blank" onclick="event.stopPropagation()">查看帳號 ↗</a>
+      </div>
+    </div>`;
+}
+
+function renderSmartResults(d) {
+  const results = d.results || [];
+  const mutual  = d.mutual  || [];
+  document.getElementById('smartCount').textContent = results.length;
+  document.getElementById('smartQueryNote').textContent =
+    d.keywords ? `搜尋關鍵字：${d.keywords.join('、')}` : '';
+
+  const grid = document.getElementById('smartGrid');
+  if (!results.length && !mutual.length) {
+    grid.innerHTML = '<p style="color:#6e6e73;font-size:13px;padding:16px 0">未找到符合帳號，建議調整關鍵字後重試</p>';
+    document.getElementById('smartResults').style.display = 'block';
+    return;
+  }
+
+  grid.innerHTML = results.length
+    ? results.map(r => buildSmartCard(r, false)).join('')
+    : '<p style="color:#6e6e73;font-size:13px;padding:12px 0">未找到付費合作帳號</p>';
+
+  // 互惠候選區塊
+  const mutualSection = document.getElementById('mutualSection');
+  const mutualGrid = document.getElementById('mutualGrid');
+  if (mutual.length) {
+    document.getElementById('mutualCount').textContent = mutual.length;
+    mutualGrid.innerHTML = mutual.map(r => buildSmartCard(r, true)).join('');
+    mutualSection.style.display = 'block';
+  } else {
+    mutualSection.style.display = 'none';
+  }
+
+  document.getElementById('smartResults').style.display = 'block';
+  document.getElementById('smartResults').scrollIntoView({behavior:'smooth'});
+}
+
+// ── 快速評估 ──
+let _qPlatform = 'threads';
+let _qCurrentResult = null;
+
+function setQPlatform(p, btn) {
+  _qPlatform = p;
+  document.querySelectorAll('#tab-quick .platform-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('quickHandle').placeholder =
+    p === 'instagram' ? '輸入 IG 帳號，例：beauty_tw' : '輸入 Threads 帳號，例：beauty_tw';
+  if (p === 'instagram' && !igLoggedIn) openIgModal();
+}
+
+async function doQuickEval() {
+  const raw = document.getElementById('quickHandle').value.trim().replace(/^@/, '');
+  if (!raw) return;
+  document.getElementById('quickErr').style.display = 'none';
+  document.getElementById('quickResultArea').style.display = 'none';
+  document.getElementById('quickLoading').style.display = 'block';
+  document.getElementById('quickLoadingMsg').textContent =
+    _qPlatform === 'instagram' ? '抓取 IG 帳號及近期貼文⋯（最多20秒）' : '抓取 Threads 帳號資料中⋯';
+  document.getElementById('quickBtn').disabled = true;
+  try {
+    const res = await fetch('/quick-eval', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: raw, platform: _qPlatform})
+    });
+    const d = await res.json();
+    if (!d.ok) throw new Error(d.error);
+    _qCurrentResult = d;
+    renderQuickResult(d);
+  } catch(e) {
+    const el = document.getElementById('quickErr');
+    el.textContent = '分析失敗：' + e.message; el.style.display = 'block';
+  } finally {
+    document.getElementById('quickLoading').style.display = 'none';
+    document.getElementById('quickBtn').disabled = false;
+  }
+}
+
+function renderQuickResult(d) {
+  const avWrap = document.getElementById('qAvWrap');
+  if (d.avatar) {
+    avWrap.innerHTML = `<img src="${d.avatar}" style="width:64px;height:64px;border-radius:50%;object-fit:cover" onerror="this.outerHTML='<div style=width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#ffb3d1,#d4b0ff);display:flex;align-items:center;justify-content:center;font-size:28px>🌸</div>'" />`;
+  }
+  document.getElementById('qName').textContent = d.display_name || d.handle;
+  document.getElementById('qHandleLabel').textContent = d.handle;
+  const postsLabel = d.platform === 'instagram' ? '貼文' : '篇';
+  document.getElementById('qStatsLine').innerHTML =
+    `<strong>${fmtF(d.followers)}</strong> 粉絲&nbsp;·&nbsp;<strong>${d.posts_count != null ? d.posts_count : '—'}</strong> ${postsLabel}`;
+  const bioEl = document.getElementById('qBioText');
+  if (d.bio) { bioEl.textContent = d.bio; bioEl.style.display = 'block'; }
+  else { bioEl.style.display = 'none'; }
+  const priceEl = document.getElementById('qPriceVal');
+  if (d.platform === 'instagram' && d.ig_price) {
+    const ip = d.ig_price;
+    const mutualHtml = ip.is_mutual ? '<span style="font-size:12px;background:#e0f0ff;color:#0055aa;padding:2px 8px;border-radius:6px;font-weight:700">互惠合作</span>' : '';
+    priceEl.innerHTML = mutualHtml || `
+      <div style="display:grid;gap:4px;text-align:left">
+        <div style="display:flex;justify-content:space-between;gap:16px;font-size:13px">
+          <span style="color:#6e6e73;font-weight:500">Reels</span>
+          <span style="font-weight:800;color:#1d1d1f">${ip.reels}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:16px;font-size:13px">
+          <span style="color:#6e6e73;font-weight:500">限動</span>
+          <span style="font-weight:800;color:#1d1d1f">${ip.story}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:16px;font-size:13px;padding-top:4px;border-top:1px solid #f0f0f0">
+          <span style="color:#6e6e73;font-weight:500">三合一</span>
+          <span style="font-weight:800;color:#c44dff">${ip.combo}</span>
+        </div>
+      </div>`;
+  } else {
+    priceEl.textContent = d.price_range;
+    priceEl.style.color = (d.price_range||'').includes('互惠') ? '#0055aa' : '#1d1d1f';
+  }
+  document.getElementById('qProfileLink').href = d.profile_url;
+
+  const postsContent = document.getElementById('qPostsContent');
+  const manualInput = document.getElementById('qManualInput');
+  const avgChip = document.getElementById('qAvgChip');
+
+  if (d.recent_posts && d.recent_posts.length > 0) {
+    manualInput.style.display = 'none';
+    let html = '<div style="display:flex;flex-direction:column;gap:8px">';
+    d.recent_posts.forEach((p, i) => {
+      const idx = p.index || (i + 1);
+      let mainCount, mainLabel, extraHtml = '';
+      if (d.platform === 'instagram') {
+        if (p.views != null) {
+          mainCount = fmt(p.views); mainLabel = '次觀看';
+          if (p.likes) extraHtml = `<span style="font-size:11px;color:#6e6e73;margin-left:8px">${fmt(p.likes)} 個讚</span>`;
+        } else {
+          mainCount = p.likes != null ? fmt(p.likes) : '—'; mainLabel = '個讚';
+        }
+      } else {
+        // Threads：view_count 只有作者能看，第三方只拿得到 like_count
+        mainCount = p.likes != null ? fmt(p.likes) : '—';
+        mainLabel = '個讚';
+        if (p.replies != null) extraHtml = `<span style="font-size:11px;color:#6e6e73;margin-left:8px">${p.replies} 則回覆</span>`;
+      }
+      const typeTag = p.is_video != null
+        ? `<span style="font-size:10px;background:#f5f5f7;border-radius:4px;padding:2px 6px;color:#6e6e73">${p.is_video ? '影片' : '圖文'}</span>`
+        : '';
+      const linkTag = p.url
+        ? `<a href="${p.url}" target="_blank" style="font-size:11px;color:#6e6e73;text-decoration:none;flex-shrink:0">↗</a>`
+        : '';
+      html += `<div style="display:flex;align-items:center;gap:12px;padding:9px 12px;background:#f9f9fb;border-radius:8px">
+        <span style="font-size:12px;color:#6e6e73;width:22px;flex-shrink:0">#${idx}</span>
+        <div style="flex:1">
+          <span style="font-size:15px;font-weight:700">${mainCount}</span>
+          <span style="font-size:12px;color:#6e6e73;margin-left:4px">${mainLabel}</span>
+          ${extraHtml}
+        </div>
+        ${typeTag}${linkTag}
+      </div>`;
+    });
+    html += '</div>';
+    postsContent.innerHTML = html;
+    if (d.avg_views != null) {
+      avgChip.textContent = `近5篇平均觀看：${fmt(d.avg_views)} 次`; avgChip.style.display = 'block';
+    } else if (d.avg_likes != null) {
+      avgChip.textContent = `近5篇平均讚數：${fmt(d.avg_likes)}`; avgChip.style.display = 'block';
+    } else {
+      avgChip.style.display = 'none';
+    }
+  } else {
+    postsContent.innerHTML = '<p style="color:#6e6e73;font-size:13px;padding:4px 0">未能自動取得近期貼文流量</p>';
+    manualInput.style.display = 'block';
+    avgChip.style.display = 'none';
+  }
+
+  document.getElementById('quickResultArea').style.display = 'block';
+  document.getElementById('quickResultArea').scrollIntoView({behavior: 'smooth'});
+}
+
+async function doManualEval() {
+  const views = parseInt(document.getElementById('qManualViews').value) || 0;
+  if (!views || !_qCurrentResult) return;
+  const followers = _qCurrentResult.followers || 0;
+  const handle = _qCurrentResult.handle || '';
+  try {
+    const res = await fetch('/evaluate', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({candidates: [{name: '', handle, followers, avg_views: views}]})
+    });
+    const data = await res.json();
+    const r = data.results[0];
+    const priceEl = document.getElementById('qPriceVal');
+    priceEl.textContent = r.price_range;
+    priceEl.style.color = r.price_range.includes('待討論') ? '#e06000' : '#1d1d1f';
+    const avgChip = document.getElementById('qAvgChip');
+    avgChip.textContent = `均流量：${fmt(views)} 次 · ROI ${r.roi}`;
+    avgChip.style.display = 'block';
+    document.getElementById('qManualInput').style.display = 'none';
+  } catch(e) { alert('評估失敗：' + e.message); }
+}
+
+// Enter 觸發智慧海撈 / 快速評估
+document.addEventListener('DOMContentLoaded', () => {
+  ['smartTopic','smartStyle'].forEach(id => {
+    document.getElementById(id)?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') doSmartSearch();
+    });
+  });
+  document.getElementById('quickHandle')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') doQuickEval();
+  });
+});
+
+// ── Tab 2 批次評估 ──
+function makeRow(d) {
+  d = d||{};
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input class="tbl-input" placeholder="林小美" data-f="name" value="${d.name||''}"/></td>
+    <td><input class="tbl-input" placeholder="@beauty_tw" data-f="handle" value="${d.handle||''}"/></td>
+    <td><input class="tbl-input" type="number" placeholder="5200" data-f="followers" value="${d.followers||''}"/></td>
+    <td><input class="tbl-input" type="number" placeholder="28000" data-f="avg_views" value="${d.avg_views||''}"/></td>
+    <td><input class="tbl-input" placeholder="18-25歲" data-f="audience_age" value="${d.audience_age||''}"/></td>
+    <td><input class="tbl-input" placeholder="風格甜美" data-f="notes" value="${d.notes||''}"/></td>
+    <td><button class="del-btn" onclick="delRow(this)">✕</button></td>`;
+  return tr;
+}
+function addRow() { document.getElementById('evalBody').appendChild(makeRow()); }
+function delRow(btn) { const t=document.getElementById('evalBody'); if(t.rows.length>1) btn.closest('tr').remove(); }
+function clearAll() { const t=document.getElementById('evalBody'); t.innerHTML=''; t.appendChild(makeRow()); document.getElementById('evalResults').style.display='none'; }
+function getRows() {
+  return Array.from(document.querySelectorAll('#evalBody tr')).map(row => {
+    const g = f => row.querySelector(`[data-f="${f}"]`)?.value?.trim()||'';
+    return {name:g('name'),handle:g('handle'),followers:parseInt(g('followers'))||0,avg_views:parseInt(g('avg_views'))||0,audience_age:g('audience_age'),notes:g('notes')};
+  }).filter(c => c.name||c.handle||c.followers);
+}
+async function doEval() {
+  const candidates = getRows();
+  if (!candidates.length) { alert('請至少輸入一位候選人'); return; }
+  document.getElementById('evalBtn').disabled=true;
+  document.getElementById('evalLoading').style.display='block';
+  document.getElementById('evalResults').style.display='none';
+  document.getElementById('evalErr').style.display='none';
+  try {
+    const res = await fetch('/evaluate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidates})});
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    renderBatch(data);
+  } catch(e) {
+    const el=document.getElementById('evalErr'); el.textContent='評估失敗：'+e.message; el.style.display='block';
+  } finally {
+    document.getElementById('evalBtn').disabled=false;
+    document.getElementById('evalLoading').style.display='none';
+  }
+}
+function renderBatch(data) {
+  const s=data.stats;
+  document.getElementById('sQ').textContent=s.qualified;
+  document.getElementById('sM').textContent=s.mutual;
+  document.getElementById('sB').textContent=s.budget?'NT$'+s.budget.toLocaleString():'—';
+  document.getElementById('sSp').textContent=s.specials;
+  function rc(r) {
+    const spec=r.is_special;
+    const tl=spec?'特例·待討論⭐':r.type==='qualified'?'正式合作':'互惠合作';
+    const tc=spec?'tb-special':r.type==='qualified'?'tb-qualified':'tb-mutual';
+    const r1=r.rule1?'<span class="ck ck-pass">✓ 粉絲達標</span>':'<span class="ck ck-fail">✗ 粉絲未達標</span>';
+    const r2=r.rule2_over?'<span class="ck ck-warn">⚠ 流量超高</span>':r.rule2?'<span class="ck ck-pass">✓ 流量達標</span>':'<span class="ck ck-fail">✗ 流量未達標</span>';
+    const age=r.audience_age?`<span class="ck ck-pass">✓ ${r.audience_age}</span>`:'<span class="ck ck-warn">年齡未填</span>';
+    const pv=r.price_range.includes('待討論')?`<span class="b2-pv b2-pv-discuss">${r.price_range}</span>`:`<span class="b2-pv">${r.price_range}</span>`;
+    return `<div class="res-card ${spec?'special':r.type}">
+      <div class="res-top"><div><div class="res-name">${r.name||'（未填）'}</div><div class="res-handle">${r.handle||'—'}</div></div><span class="type-badge ${tc}">${tl}</span></div>
+      <div class="b2-metrics">
+        <div class="b2-m"><div class="mv">${fmt(r.followers)}</div><div class="ml">粉絲數</div></div>
+        <div class="b2-m"><div class="mv">${fmt(r.avg_views)}</div><div class="ml">均流量</div></div>
+        <div class="b2-m"><div class="mv">${r.roi}</div><div class="ml">ROI</div></div>
+      </div>
+      <div class="b2-checks">${r1}${r2}${age}</div>
+      <div class="b2-price"><div><div style="font-size:10px;color:#6e6e73;margin-bottom:2px">建議報價</div>${pv}</div>${r.notes?`<span style="font-size:11px;color:#6e6e73;font-style:italic">${r.notes}</span>`:''}</div>
+    </div>`;
+  }
+  const q=data.results.filter(r=>r.type==='qualified'), m=data.results.filter(r=>r.type==='mutual');
+  document.getElementById('qualCards').innerHTML=q.map(rc).join('')||'<p style="color:#6e6e73;font-size:13px;padding:8px 0">無符合條件的正式合作人選</p>';
+  document.getElementById('mutCards').innerHTML=m.map(rc).join('')||'<p style="color:#6e6e73;font-size:13px;padding:8px 0">無互惠潛力人選</p>';
+  document.getElementById('evalResults').style.display='block';
+  document.getElementById('evalResults').scrollIntoView({behavior:'smooth'});
+}
+
+/* ── 卡片勾選 & 匯出 ── */
+let _selectedKOCs = {};  // handle → card data
+
+function toggleCardSelect(handle, evt) {
+  evt.stopPropagation();
+  const card = document.querySelector(`.smart-card[data-handle="${CSS.escape(handle)}"]`);
+  const cb   = document.getElementById('cb_' + handle.replace(/[^a-zA-Z0-9]/g,'_'));
+  if (_selectedKOCs[handle]) {
+    delete _selectedKOCs[handle];
+    if (card) card.classList.remove('selected');
+    if (cb) cb.checked = false;
+  } else {
+    const dataStr = document.querySelector(`.smart-card[data-handle="${CSS.escape(handle)}"]`)?.dataset?.koc;
+    if (dataStr) _selectedKOCs[handle] = JSON.parse(dataStr);
+    if (card) card.classList.add('selected');
+    if (cb) cb.checked = true;
+  }
+  updateExportBar();
+}
+
+function updateExportBar() {
+  const count = Object.keys(_selectedKOCs).length;
+  const bar = document.getElementById('exportBar');
+  if (count > 0) {
+    bar.classList.add('show');
+    document.getElementById('exportBarCount').textContent = count;
+  } else {
+    bar.classList.remove('show');
+  }
+}
+
+async function doExportExcel() {
+  const kocs = Object.values(_selectedKOCs);
+  if (!kocs.length) return;
+  const topic = document.getElementById('exportTopicInput').value.trim() ||
+                document.getElementById('smartTopic')?.value?.trim() || '';
+  const btn = document.getElementById('exportBarBtn');
+  btn.disabled = true; btn.textContent = '匯出中⋯';
+  try {
+    const res = await fetch('/export-excel', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({kocs, topic})
+    });
+    if (!res.ok) throw new Error('匯出失敗');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `KOC名單_${new Date().toLocaleDateString('zh-TW').replace(/\//g,'')}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('匯出失敗：' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '匯出 Excel ↓';
+  }
+}
+</script>
+
+<!-- 匯出浮動列 -->
+<div class="export-bar" id="exportBar">
+  <div class="export-bar-info">已選 <strong id="exportBarCount">0</strong> 位 KOC</div>
+  <input class="export-topic-input" id="exportTopicInput" placeholder="主題（選填）" />
+  <button class="btn btn-sm" id="exportBarBtn" onclick="doExportExcel()">匯出 Excel ↓</button>
+  <button class="btn-outline btn-sm" onclick="_selectedKOCs={};document.querySelectorAll('.smart-card.selected').forEach(c=>{c.classList.remove('selected');c.querySelector('input[type=checkbox]').checked=false;});updateExportBar()">清除</button>
+</div>
+</body>
+</html>

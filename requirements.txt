@@ -1,0 +1,5 @@
+flask
+requests
+instaloader
+beautifulsoup4
+playwright
